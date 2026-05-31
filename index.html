@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Ancient Indian Texts</title>
+
+<style>
+body {
+  font-family: Georgia, serif;
+  margin: 20px;
+}
+
+button {
+  padding: 8px 15px;
+  margin: 4px;
+  cursor: pointer;
+}
+
+#breadcrumb {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #555;
+}
+
+.verse {
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ccc;
+}
+
+.sanskrit {
+  font-size: 28px;
+  line-height: 1.8;
+  margin-bottom: 15px;
+}
+
+table {
+  border-collapse: collapse;
+  margin-bottom: 15px;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+}
+
+.sukta-sanskrit {
+  background-color: white;
+}
+
+.sukta-translation {
+  background-color: #cce5ff;
+}
+
+.sukta-complete {
+  background-color: #ccffcc;
+}
+
+.legend-item {
+  padding: 4px 8px;
+  border: 1px solid #999;
+  margin-right: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Ancient Indian Texts</h1>
+
+<div id="breadcrumb"></div>
+
+<div>
+  <label for="languageSelect"><strong>Translation:</strong></label>
+  <select id="languageSelect">
+    <option value="en">English</option>
+    <option value="hi">Hindi</option>
+  </select>
+
+  &nbsp;&nbsp;
+
+  <label>
+    <input type="checkbox" id="showWordByWord">
+    Show word-by-word meaning
+  </label>
+</div>
+
+<hr>
+
+<div id="menu"></div>
+
+<hr>
+
+<div id="content"></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+const supabaseUrl = 'https://wuafscskajgrgituurac.supabase.co'
+const supabaseKey = 'sb_publishable_xLK66VSKax1BRjirQxb9PA_7n3d5BNU'
+
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+window.currentUnitId = null
+window.currentSuktaNumber = null
+
+window.showHome = function() {
+  document.getElementById("breadcrumb").innerHTML = ""
+
+  document.getElementById("menu").innerHTML = `
+    <h2>Sections</h2>
+    <button onclick="showVedas()">Vedas</button>
+  `
+
+  document.getElementById("content").innerHTML = ""
+}
+
+window.showVedas = function() {
+  document.getElementById("breadcrumb").innerHTML = "Home > Vedas"
+
+  document.getElementById("menu").innerHTML = `
+    <h2>Books</h2>
+    <button onclick="showRigVeda()">Rig Veda</button>
+  `
+
+  document.getElementById("content").innerHTML = ""
+}
+
+window.showRigVeda = function() {
+  document.getElementById("breadcrumb").innerHTML =
+    "Home > Vedas > Rig Veda"
+
+  document.getElementById("menu").innerHTML = `
+    <h2>Mandalas</h2>
+    <button onclick="showMandala1()">Mandala 1</button>
+  `
+
+  document.getElementById("content").innerHTML = ""
+}
+
+window.showMandala1 = async function() {
+  window.currentUnitId = null
+  window.currentSuktaNumber = null
+
+  document.getElementById("breadcrumb").innerHTML =
+    "Home > Vedas > Rig Veda > Mandala 1"
+
+  const { data, error } = await supabase
+    .from('sukta_status')
+    .select('unit_id, unit_number, status, verse_count, translated_verse_count, word_meaning_verse_count')
+    .order('unit_number')
+
+  if (error) {
+    document.getElementById("content").innerHTML = error.message
+    return
+  }
+
+  let html = `
+    <h2>Suktas</h2>
+
+    <p>
+      <span class="legend-item sukta-complete">Green</span>
+      Translation + word meanings
+
+      <span class="legend-item sukta-translation">Blue</span>
+      Translation only
+
+      <span class="legend-item sukta-sanskrit">White</span>
+      Sanskrit only
+    </p>
+  `
+
+  data.forEach(s => {
+    let cssClass = "sukta-sanskrit"
+
+    if (s.status === "complete") {
+      cssClass = "sukta-complete"
+    } else if (s.status === "translation") {
+      cssClass = "sukta-translation"
+    }
+
+    html += `
+      <button
+        class="${cssClass}"
+        title="Verses: ${s.verse_count}, Translated: ${s.translated_verse_count}, Word meanings: ${s.word_meaning_verse_count}"
+        onclick="showSukta(${s.unit_id}, ${s.unit_number})"
+      >
+        Sukta ${s.unit_number}
+      </button>
+    `
+  })
+
+  document.getElementById("menu").innerHTML = html
+  document.getElementById("content").innerHTML = ""
+}
+
+window.showSukta = async function(unitId, suktaNumber) {
+  window.currentUnitId = unitId
+  window.currentSuktaNumber = suktaNumber
+
+  document.getElementById("breadcrumb").innerHTML =
+    "Home > Vedas > Rig Veda > Mandala 1 > Sukta " + suktaNumber
+
+  document.getElementById("menu").innerHTML =
+    `<button onclick="showMandala1()">Back to Sukta List</button>`
+
+  const lang = document.getElementById("languageSelect").value
+  const showWords = document.getElementById("showWordByWord").checked
+  const contentDiv = document.getElementById("content")
+
+  contentDiv.innerHTML =
+    "<h2>Loading Sukta " + suktaNumber + "...</h2>"
+
+  const { data: verses, error: verseError } = await supabase
+    .from('verses')
+    .select('verse_key, verse_number, original_text')
+    .eq('unit_id', unitId)
+    .order('verse_number')
+
+  if (verseError) {
+    contentDiv.innerHTML = verseError.message
+    return
+  }
+
+  const verseKeys = verses.map(v => v.verse_key)
+
+  const { data: translations, error: translationError } = await supabase
+    .from('verse_translations')
+    .select('verse_key, language_code, translation_text')
+    .in('verse_key', verseKeys)
+    .eq('language_code', lang)
+
+  if (translationError) {
+    contentDiv.innerHTML = translationError.message
+    return
+  }
+
+  let wordMeanings = []
+
+  if (showWords) {
+    const { data, error } = await supabase
+      .from('word_meanings')
+      .select('verse_key, word_order, word_text, meaning_en, meaning_hi')
+      .in('verse_key', verseKeys)
+      .order('word_order')
+
+    if (error) {
+      contentDiv.innerHTML = error.message
+      return
+    }
+
+    wordMeanings = data
+  }
+
+  let languageTitle = lang === "hi" ? "Hindi" : "English"
+
+  let html = "<h2>Sukta " + suktaNumber + "</h2>"
+  html += "<h3>" + languageTitle + " Translation</h3>"
+
+  verses.forEach(v => {
+    const trans = translations.find(t => t.verse_key === v.verse_key)
+
+    let wordTable = ""
+
+    if (showWords) {
+      const words = wordMeanings.filter(w => w.verse_key === v.verse_key)
+
+      if (words.length > 0) {
+        wordTable = `
+          <h4>Word-by-word Meaning</h4>
+          <table>
+            <tr>
+              <th>Sanskrit</th>
+              <th>Meaning</th>
+            </tr>
+        `
+
+        words.forEach(w => {
+          const meaning =
+            lang === "hi"
+              ? (w.meaning_hi || w.meaning_en || "")
+              : (w.meaning_en || "")
+
+          wordTable += `
+            <tr>
+              <td>${w.word_text}</td>
+              <td>${meaning}</td>
+            </tr>
+          `
+        })
+
+        wordTable += "</table>"
+      } else {
+        wordTable = "<p><em>Word-by-word meaning not available.</em></p>"
+      }
+    }
+
+    html += `
+      <div class="verse">
+        <h3>${v.verse_key}</h3>
+
+        <div class="sanskrit">
+          ${v.original_text}
+        </div>
+
+        ${wordTable}
+
+        <h4>Translation</h4>
+
+        <p>
+          ${
+            trans && trans.translation_text
+            ? trans.translation_text
+            : "<em>Translation not available.</em>"
+          }
+        </p>
+      </div>
+    `
+  })
+
+  contentDiv.innerHTML = html
+}
+
+document
+  .getElementById("languageSelect")
+  .addEventListener("change", function() {
+    if (
+      window.currentUnitId !== null &&
+      window.currentSuktaNumber !== null
+    ) {
+      window.showSukta(
+        window.currentUnitId,
+        window.currentSuktaNumber
+      )
+    }
+  })
+
+document
+  .getElementById("showWordByWord")
+  .addEventListener("change", function() {
+    if (
+      window.currentUnitId !== null &&
+      window.currentSuktaNumber !== null
+    ) {
+      window.showSukta(
+        window.currentUnitId,
+        window.currentSuktaNumber
+      )
+    }
+  })
+
+window.showHome()
+</script>
+
+</body>
+</html>
