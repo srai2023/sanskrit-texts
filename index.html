@@ -14,14 +14,6 @@ body {
   color: #222;
 }
 
-.transliteration {
-  font-size: 20px;
-  line-height: 1.6;
-  color: #555;
-  font-style: italic;
-  margin-bottom: 15px;
-}
-
 header {
   background: #6b2f1a;
   color: white;
@@ -58,6 +50,12 @@ header p {
   margin-bottom: 15px;
 }
 
+#breadcrumb a {
+  color: #6b2f1a;
+  text-decoration: none;
+  font-weight: bold;
+}
+
 .card {
   background: white;
   border-radius: 14px;
@@ -80,17 +78,9 @@ button:hover {
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
-.sukta-sanskrit {
-  background-color: white;
-}
-
-.sukta-translation {
-  background-color: #d9ecff;
-}
-
-.sukta-complete {
-  background-color: #d9f7d9;
-}
+.sukta-sanskrit { background-color: white; }
+.sukta-translation { background-color: #d9ecff; }
+.sukta-complete { background-color: #d9f7d9; }
 
 .legend-item {
   padding: 5px 10px;
@@ -122,6 +112,14 @@ button:hover {
   color: #111;
 }
 
+.transliteration {
+  font-size: 20px;
+  line-height: 1.6;
+  color: #555;
+  font-style: italic;
+  margin-bottom: 15px;
+}
+
 .translation-box {
   background: #f2efe8;
   padding: 14px;
@@ -146,15 +144,15 @@ th, td {
   vertical-align: top;
 }
 
-@media (max-width: 600px) {
-  .sanskrit {
-    font-size: 24px;
-  }
+input[type="text"] {
+  padding: 8px;
+  width: 260px;
+  max-width: 90%;
+}
 
-  button {
-    width: 100%;
-    text-align: left;
-  }
+@media (max-width: 600px) {
+  .sanskrit { font-size: 24px; }
+  button { width: 100%; text-align: left; }
 }
 </style>
 </head>
@@ -163,7 +161,7 @@ th, td {
 
 <header>
   <h1>Ancient Indian Texts</h1>
-  <p>Rig Veda with Sanskrit text, translations, and word-by-word meanings</p>
+  <p>Rig Veda with Sanskrit text, translations, word meanings, and audio links</p>
 </header>
 
 <div class="container">
@@ -188,10 +186,9 @@ th, td {
 
   <label for="searchBox"><strong>Search:</strong></label>
   <input
-   type="text"
-   id="searchBox"
-   placeholder="RV-1-99-1, Agni, इन्द्र..."
-   style="padding:8px; width:260px;"
+    type="text"
+    id="searchBox"
+    placeholder="RV-1-99-1, अग्नि, इन्द्र..."
   >
 
   <button onclick="searchVerses()">Search</button>
@@ -212,120 +209,31 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 function aurobindoLink(mandalaNumber, suktaNumber) {
   const m = String(mandalaNumber).padStart(2, "0")
   const s = String(suktaNumber).padStart(3, "0")
-
   return `https://sri-aurobindo.co.in/workings/matherials/rigveda/${m}/${m}-${s}.htm`
 }
 
 window.currentUnitId = null
 window.currentSuktaNumber = null
 window.currentMandalaNumber = null
+window.currentChapterId = null
 
-window.searchVerses = async function() {
-  const query = document.getElementById("searchBox").value.trim()
-  const contentDiv = document.getElementById("content")
-
-  if (!query) {
-    contentDiv.innerHTML = "<p>Please enter a search term.</p>"
-    return
-  }
-
-  document.getElementById("breadcrumb").innerHTML =
-    "Home > Search"
-
-  document.getElementById("menu").innerHTML =
-    `<button onclick="showHome()">Back to Home</button>`
-
-  contentDiv.innerHTML =
-    "<h2>Searching...</h2>"
-
-  let supabaseQuery = supabase
-    .from("verses")
-    .select("verse_key, verse_number, original_text, unit_id")
-    .limit(50)
-
-  if (query.startsWith("RV-")) {
-    supabaseQuery = supabaseQuery.eq("verse_key", query)
-  } else {
-    supabaseQuery = supabaseQuery.ilike("original_text", "%" + query + "%")
-  }
-
-  const { data, error } = await supabaseQuery
-
-  if (error) {
-    contentDiv.innerHTML = error.message
-    return
-  }
-
-  if (!data || data.length === 0) {
-    contentDiv.innerHTML =
-      "<p>No results found.</p>"
-    return
-  }
-
-  let html = `<h2>Search Results</h2>
-              <p>${data.length} result(s) shown</p>`
-
-  data.forEach(v => {
-    html += `
-      <div class="verse">
-        <h3>${v.verse_key}</h3>
-
-        <div class="sanskrit">
-          ${v.original_text}
-        </div>
-
-        <button onclick="showSuktaByUnitId(${v.unit_id})">
-          Open Sukta
-        </button>
-      </div>
-    `
-  })
-
-  contentDiv.innerHTML = html
-}
-
-window.showSuktaByUnitId = async function(unitId) {
-  const { data, error } = await supabase
-    .from("units")
-    .select("unit_number, chapter_id")
-    .eq("id", unitId)
-    .single()
-
-  if (error) {
-    document.getElementById("content").innerHTML = error.message
-    return
-  }
-
-  const { data: chapter, error: chapterError } = await supabase
-    .from("chapters")
-    .select("chapter_number")
-    .eq("id", data.chapter_id)
-    .single()
-
-  if (chapterError) {
-    document.getElementById("content").innerHTML = chapterError.message
-    return
-  }
-
-  showSukta(
-    unitId,
-    chapter.chapter_number,
-    data.unit_number
-  )
-}
 window.showHome = function() {
   document.getElementById("breadcrumb").innerHTML = ""
 
   document.getElementById("menu").innerHTML = `
     <h2>Sections</h2>
+
     <button onclick="showVedas()">Vedas</button>
+
+    <button onclick="showPopularSuktas()">Popular Suktas</button>
   `
 
   document.getElementById("content").innerHTML = ""
 }
 
 window.showVedas = function() {
-  document.getElementById("breadcrumb").innerHTML = "Home > Vedas"
+  document.getElementById("breadcrumb").innerHTML =
+    `<a href="#" onclick="showHome()">Home</a> > Vedas`
 
   document.getElementById("menu").innerHTML = `
     <h2>Books</h2>
@@ -335,9 +243,69 @@ window.showVedas = function() {
   document.getElementById("content").innerHTML = ""
 }
 
+window.showPopularSuktas = function() {
+  document.getElementById("breadcrumb").innerHTML =
+    `<a href="#" onclick="showHome()">Home</a> > Popular Suktas`
+
+  document.getElementById("menu").innerHTML = `
+    <h2>Popular Suktas</h2>
+
+    <h3>Core Hymns</h3>
+    <button onclick="goToPopular(1,1)">🔥 Agni Sukta (RV 1.1)</button>
+    <button onclick="goToPopular(1,50)">🌞 Surya Sukta (RV 1.50)</button>
+    <button onclick="goToPopular(1,99)">🛡️ Durga Sukta / Jātavedase Mantra (RV 1.99)</button>
+    <button onclick="goToPopular(1,154)">🕉️ Vishnu Sukta (RV 1.154)</button>
+
+    <h3>Famous Mantras</h3>
+    <button onclick="goToPopular(3,62)">🕯️ Gayatri Mantra Sukta (RV 3.62)</button>
+    <button onclick="goToPopular(7,59)">🕉️ Mahamrityunjaya Mantra Sukta (RV 7.59)</button>
+
+    <h3>Bhagya and Varuna Suktas</h3>
+    <button onclick="goToPopular(7,41)">💰 Bhagya Sukta (RV 7.41)</button>
+    <button onclick="goToPopular(7,87)">🌊 Varuna Sukta I (RV 7.87)</button>
+    <button onclick="goToPopular(7,88)">🌊 Varuna Sukta II (RV 7.88)</button>
+    <button onclick="goToPopular(7,89)">🌊 Varuna Sukta III (RV 7.89)</button>
+
+    <h3>Cosmic and Philosophical Suktas</h3>
+    <button onclick="goToPopular(10,90)">👑 Purusha Sukta (RV 10.90)</button>
+    <button onclick="goToPopular(10,121)">✨ Hiranyagarbha Sukta (RV 10.121)</button>
+    <button onclick="goToPopular(10,125)">🌺 Devi Sukta (RV 10.125)</button>
+    <button onclick="goToPopular(10,129)">🌌 Nasadiya Sukta (RV 10.129)</button>
+  `
+
+  document.getElementById("content").innerHTML = ""
+}
+
+window.goToPopular = async function(mandalaNumber, suktaNumber) {
+  const { data: chapter, error: chapterError } = await supabase
+    .from('chapters')
+    .select('id')
+    .eq('chapter_number', mandalaNumber)
+    .single()
+
+  if (chapterError) {
+    document.getElementById("content").innerHTML = chapterError.message
+    return
+  }
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id')
+    .eq('chapter_id', chapter.id)
+    .eq('unit_number', suktaNumber)
+    .single()
+
+  if (unitError) {
+    document.getElementById("content").innerHTML = unitError.message
+    return
+  }
+
+  showSukta(unit.id, mandalaNumber, suktaNumber)
+}
+
 window.showRigVeda = async function() {
   document.getElementById("breadcrumb").innerHTML =
-    "Home > Vedas > Rig Veda"
+    `<a href="#" onclick="showHome()">Home</a> > <a href="#" onclick="showVedas()">Vedas</a> > Rig Veda`
 
   const { data, error } = await supabase
     .from('chapters')
@@ -370,15 +338,11 @@ window.showMandala = async function(chapterId, mandalaNumber) {
   window.currentSuktaNumber = null
 
   document.getElementById("breadcrumb").innerHTML =
-  `
-  <a href="#" onclick="showHome()">Home</a>
-  >
-  <a href="#" onclick="showVedas()">Vedas</a>
-  >
-  <a href="#" onclick="showRigVeda()">Rig Veda</a>
-  >
-  Mandala ${mandalaNumber}
-  `
+    `<a href="#" onclick="showHome()">Home</a> >
+     <a href="#" onclick="showVedas()">Vedas</a> >
+     <a href="#" onclick="showRigVeda()">Rig Veda</a> >
+     Mandala ${mandalaNumber}`
+
   const { data, error } = await supabase
     .from('sukta_status')
     .select('unit_id, unit_number, status, verse_count, translated_verse_count, word_meaning_verse_count')
@@ -391,6 +355,8 @@ window.showMandala = async function(chapterId, mandalaNumber) {
   }
 
   let html = `
+    <button onclick="showRigVeda()">← Back to Mandalas</button>
+
     <h2>Mandala ${mandalaNumber} - Suktas</h2>
 
     <p>
@@ -433,24 +399,18 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
   window.currentUnitId = unitId
   window.currentMandalaNumber = mandalaNumber
   window.currentSuktaNumber = suktaNumber
+  window.location.hash =
+  `RV-${mandalaNumber}-${suktaNumber}-1`
 
   document.getElementById("breadcrumb").innerHTML =
-  `
-  <a href="#" onclick="showHome()">Home</a>
-  >
-  <a href="#" onclick="showVedas()">Vedas</a>
-  >
-  <a href="#" onclick="showRigVeda()">Rig Veda</a>
-  >
-  <a href="#" onclick="showMandala(${window.currentChapterId},${mandalaNumber})">
-  Mandala ${mandalaNumber}
-  </a>
-  >
-  Sukta ${suktaNumber}
-  `
+    `<a href="#" onclick="showHome()">Home</a> >
+     <a href="#" onclick="showVedas()">Vedas</a> >
+     <a href="#" onclick="showRigVeda()">Rig Veda</a> >
+     Mandala ${mandalaNumber} >
+     Sukta ${suktaNumber}`
 
   document.getElementById("menu").innerHTML =
-    `<button onclick="showRigVeda()">Back to Mandalas</button>`
+    `<button onclick="showRigVeda()">← Back to Mandalas</button>`
 
   const lang = document.getElementById("languageSelect").value
   const showWords = document.getElementById("showWordByWord").checked
@@ -501,19 +461,19 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
   }
 
   let languageTitle = lang === "hi" ? "Hindi" : "English"
+  let externalLink = aurobindoLink(mandalaNumber, suktaNumber)
 
-  let html = "<h2>Mandala " + mandalaNumber + ", Sukta " + suktaNumber + "</h2>"
-  
-  const externalLink = aurobindoLink(mandalaNumber, suktaNumber)
+  let html = `
+    <h2>Mandala ${mandalaNumber}, Sukta ${suktaNumber}</h2>
 
-  html += `
-  <p>
-    <a href="${externalLink}" target="_blank">
-      🎧 Text & Audio (Sri Aurobindo Site)
-    </a>
-  </p>
+    <p>
+      <a href="${externalLink}" target="_blank">
+        🎧 Text & Audio on Sri Aurobindo Site
+      </a>
+    </p>
+
+    <h3>${languageTitle} Translation</h3>
   `
-  html += "<h3>" + languageTitle + " Translation</h3>"
 
   verses.forEach(v => {
     const trans = translations.find(t => t.verse_key === v.verse_key)
@@ -554,22 +514,26 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
     }
 
     html += `
-      <div class="verse">
+        <div
+         class="verse"
+         id="${v.verse_key}"
+        >
         <h3>${v.verse_key}</h3>
 
         <div class="sanskrit">
           ${v.original_text}
         </div>
-      ${
-         v.transliteration
-         ? `<div class="transliteration">${v.transliteration}</div>`
-         : ""
-      }
+
+        ${
+          v.transliteration
+          ? `<div class="transliteration">${v.transliteration}</div>`
+          : ""
+        }
+
         ${wordTable}
 
         <div class="translation-box">
           <h4>Translation</h4>
-
           <p>
             ${
               trans && trans.translation_text
@@ -583,6 +547,93 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
   })
 
   contentDiv.innerHTML = html
+}
+
+window.searchVerses = async function() {
+  const query = document.getElementById("searchBox").value.trim()
+  const contentDiv = document.getElementById("content")
+
+  if (!query) {
+    contentDiv.innerHTML = "<p>Please enter a search term.</p>"
+    return
+  }
+
+  document.getElementById("breadcrumb").innerHTML =
+    `<a href="#" onclick="showHome()">Home</a> > Search`
+
+  document.getElementById("menu").innerHTML =
+    `<button onclick="showHome()">← Back to Home</button>`
+
+  contentDiv.innerHTML = "<h2>Searching...</h2>"
+
+  let supabaseQuery = supabase
+    .from("verses")
+    .select("verse_key, verse_number, original_text, unit_id")
+    .limit(50)
+
+  if (query.startsWith("RV-")) {
+    supabaseQuery = supabaseQuery.eq("verse_key", query)
+  } else {
+    supabaseQuery = supabaseQuery.ilike("original_text", "%" + query + "%")
+  }
+
+  const { data, error } = await supabaseQuery
+
+  if (error) {
+    contentDiv.innerHTML = error.message
+    return
+  }
+
+  if (!data || data.length === 0) {
+    contentDiv.innerHTML = "<p>No results found.</p>"
+    return
+  }
+
+  let html = `<h2>Search Results</h2><p>${data.length} result(s) shown</p>`
+
+  data.forEach(v => {
+    html += `
+      <div class="verse">
+        <h3>${v.verse_key}</h3>
+
+        <div class="sanskrit">
+          ${v.original_text}
+        </div>
+
+        <button onclick="showSuktaByUnitId(${v.unit_id})">
+          Open Sukta
+        </button>
+      </div>
+    `
+  })
+
+  contentDiv.innerHTML = html
+}
+
+window.showSuktaByUnitId = async function(unitId) {
+  const { data, error } = await supabase
+    .from("units")
+    .select("unit_number, chapter_id")
+    .eq("id", unitId)
+    .single()
+
+  if (error) {
+    document.getElementById("content").innerHTML = error.message
+    return
+  }
+
+  const { data: chapter, error: chapterError } = await supabase
+    .from("chapters")
+    .select("chapter_number")
+    .eq("id", data.chapter_id)
+    .single()
+
+  if (chapterError) {
+    document.getElementById("content").innerHTML = chapterError.message
+    return
+  }
+
+  showSukta(unitId, chapter.chapter_number, data.unit_number)
 }
 
 document
@@ -616,7 +667,64 @@ document
       )
     }
   })
+async function handleHash() {
 
+  const hash = window.location.hash
+
+  if (!hash) {
+    showHome()
+    return
+  }
+
+  const verseKey = hash.substring(1)
+
+  if (!verseKey.startsWith("RV-")) {
+    showHome()
+    return
+  }
+
+  const { data, error } = await supabase
+    .from("verses")
+    .select("unit_id")
+    .eq("verse_key", verseKey)
+    .single()
+
+  if (error || !data) {
+    showHome()
+    return
+  }
+
+  const { data: unit } = await supabase
+    .from("units")
+    .select("unit_number, chapter_id")
+    .eq("id", data.unit_id)
+    .single()
+
+  const { data: chapter } = await supabase
+    .from("chapters")
+    .select("chapter_number")
+    .eq("id", unit.chapter_id)
+    .single()
+
+  await showSukta(
+    data.unit_id,
+    chapter.chapter_number,
+    unit.unit_number
+  )
+
+  setTimeout(() => {
+
+    const verseElement =
+      document.getElementById(verseKey)
+
+    if (verseElement) {
+      verseElement.scrollIntoView({
+        behavior: "smooth"
+      })
+    }
+
+  }, 500)
+}
 window.showHome()
 </script>
 
