@@ -97,12 +97,13 @@ th, td {
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 const supabaseUrl = 'https://wuafscskajgrgituurac.supabase.co'
-const supabaseKey = 'sb_publishable_xLK66VSKax1BRjirQxb9PA_7n3d5BNU'
+const supabaseKey = 'PASTE_YOUR_PUBLISHABLE_KEY_HERE'
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 window.currentUnitId = null
 window.currentSuktaNumber = null
+window.currentMandalaNumber = null
 
 window.showHome = function() {
   document.getElementById("breadcrumb").innerHTML = ""
@@ -126,28 +127,46 @@ window.showVedas = function() {
   document.getElementById("content").innerHTML = ""
 }
 
-window.showRigVeda = function() {
+window.showRigVeda = async function() {
   document.getElementById("breadcrumb").innerHTML =
     "Home > Vedas > Rig Veda"
 
-  document.getElementById("menu").innerHTML = `
-    <h2>Mandalas</h2>
-    <button onclick="showMandala1()">Mandala 1</button>
-  `
+  const { data, error } = await supabase
+    .from('chapters')
+    .select('id, chapter_number, name')
+    .order('chapter_number')
 
+  if (error) {
+    document.getElementById("content").innerHTML = error.message
+    return
+  }
+
+  let html = "<h2>Mandalas</h2>"
+
+  data.forEach(m => {
+    html += `
+      <button onclick="showMandala(${m.id}, ${m.chapter_number})">
+        Mandala ${m.chapter_number}
+      </button>
+    `
+  })
+
+  document.getElementById("menu").innerHTML = html
   document.getElementById("content").innerHTML = ""
 }
 
-window.showMandala1 = async function() {
+window.showMandala = async function(chapterId, mandalaNumber) {
+  window.currentMandalaNumber = mandalaNumber
   window.currentUnitId = null
   window.currentSuktaNumber = null
 
   document.getElementById("breadcrumb").innerHTML =
-    "Home > Vedas > Rig Veda > Mandala 1"
+    "Home > Vedas > Rig Veda > Mandala " + mandalaNumber
 
   const { data, error } = await supabase
     .from('sukta_status')
     .select('unit_id, unit_number, status, verse_count, translated_verse_count, word_meaning_verse_count')
+    .eq('chapter_id', chapterId)
     .order('unit_number')
 
   if (error) {
@@ -156,7 +175,7 @@ window.showMandala1 = async function() {
   }
 
   let html = `
-    <h2>Suktas</h2>
+    <h2>Mandala ${mandalaNumber} - Suktas</h2>
 
     <p>
       <span class="legend-item sukta-complete">Green</span>
@@ -183,7 +202,7 @@ window.showMandala1 = async function() {
       <button
         class="${cssClass}"
         title="Verses: ${s.verse_count}, Translated: ${s.translated_verse_count}, Word meanings: ${s.word_meaning_verse_count}"
-        onclick="showSukta(${s.unit_id}, ${s.unit_number})"
+        onclick="showSukta(${s.unit_id}, ${mandalaNumber}, ${s.unit_number})"
       >
         Sukta ${s.unit_number}
       </button>
@@ -194,22 +213,23 @@ window.showMandala1 = async function() {
   document.getElementById("content").innerHTML = ""
 }
 
-window.showSukta = async function(unitId, suktaNumber) {
+window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
   window.currentUnitId = unitId
+  window.currentMandalaNumber = mandalaNumber
   window.currentSuktaNumber = suktaNumber
 
   document.getElementById("breadcrumb").innerHTML =
-    "Home > Vedas > Rig Veda > Mandala 1 > Sukta " + suktaNumber
+    "Home > Vedas > Rig Veda > Mandala " + mandalaNumber + " > Sukta " + suktaNumber
 
   document.getElementById("menu").innerHTML =
-    `<button onclick="showMandala1()">Back to Sukta List</button>`
+    `<button onclick="showRigVeda()">Back to Mandalas</button>`
 
   const lang = document.getElementById("languageSelect").value
   const showWords = document.getElementById("showWordByWord").checked
   const contentDiv = document.getElementById("content")
 
   contentDiv.innerHTML =
-    "<h2>Loading Sukta " + suktaNumber + "...</h2>"
+    "<h2>Loading Mandala " + mandalaNumber + ", Sukta " + suktaNumber + "...</h2>"
 
   const { data: verses, error: verseError } = await supabase
     .from('verses')
@@ -254,7 +274,7 @@ window.showSukta = async function(unitId, suktaNumber) {
 
   let languageTitle = lang === "hi" ? "Hindi" : "English"
 
-  let html = "<h2>Sukta " + suktaNumber + "</h2>"
+  let html = "<h2>Mandala " + mandalaNumber + ", Sukta " + suktaNumber + "</h2>"
   html += "<h3>" + languageTitle + " Translation</h3>"
 
   verses.forEach(v => {
@@ -326,10 +346,12 @@ document
   .addEventListener("change", function() {
     if (
       window.currentUnitId !== null &&
-      window.currentSuktaNumber !== null
+      window.currentSuktaNumber !== null &&
+      window.currentMandalaNumber !== null
     ) {
       window.showSukta(
         window.currentUnitId,
+        window.currentMandalaNumber,
         window.currentSuktaNumber
       )
     }
@@ -340,10 +362,12 @@ document
   .addEventListener("change", function() {
     if (
       window.currentUnitId !== null &&
-      window.currentSuktaNumber !== null
+      window.currentSuktaNumber !== null &&
+      window.currentMandalaNumber !== null
     ) {
       window.showSukta(
         window.currentUnitId,
+        window.currentMandalaNumber,
         window.currentSuktaNumber
       )
     }
