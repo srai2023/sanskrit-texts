@@ -446,7 +446,7 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
 
   const { data: verses, error: verseError } = await supabase
     .from('verses')
-    .select('verse_key, verse_number, original_text')
+    .select('verse_key, verse_number, original_text, transliteration')
     .eq('unit_id', unitId)
     .order('verse_number')
 
@@ -535,7 +535,11 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
         <div class="sanskrit">
           ${v.original_text}
         </div>
-
+      ${
+         v.transliteration
+         ? `<div class="transliteration">${v.transliteration}</div>`
+         : ""
+      }
         ${wordTable}
 
         <div class="translation-box">
