@@ -150,6 +150,11 @@ input[type="text"] {
   max-width: 90%;
 }
 
+.highlight-verse {
+  outline: 4px solid #ffcc66;
+  transition: outline 0.3s ease;
+}
+
 @media (max-width: 600px) {
   .sanskrit { font-size: 24px; }
   button { width: 100%; text-align: left; }
@@ -218,6 +223,11 @@ window.currentMandalaNumber = null
 window.currentChapterId = null
 
 window.showHome = function() {
+  window.currentUnitId = null
+  window.currentSuktaNumber = null
+  window.currentMandalaNumber = null
+  window.currentChapterId = null
+
   document.getElementById("breadcrumb").innerHTML = ""
 
   document.getElementById("menu").innerHTML = `
@@ -399,8 +409,6 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
   window.currentUnitId = unitId
   window.currentMandalaNumber = mandalaNumber
   window.currentSuktaNumber = suktaNumber
-  window.location.hash =
-  `RV-${mandalaNumber}-${suktaNumber}-1`
 
   document.getElementById("breadcrumb").innerHTML =
     `<a href="#" onclick="showHome()">Home</a> >
@@ -476,80 +484,80 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
   `
 
   verses.forEach(v => {
-  const trans = translations.find(t => t.verse_key === v.verse_key)
+    const trans = translations.find(t => t.verse_key === v.verse_key)
 
-  let wordTable = ""
+    let wordTable = ""
 
-  if (showWords) {
-    const words = wordMeanings.filter(w => w.verse_key === v.verse_key)
+    if (showWords) {
+      const words = wordMeanings.filter(w => w.verse_key === v.verse_key)
 
-    if (words.length > 0) {
-      wordTable = `
-        <h4>Word-by-word Meaning</h4>
-        <table>
-          <tr>
-            <th>Sanskrit</th>
-            <th>Meaning</th>
-          </tr>
-      `
-
-      words.forEach(w => {
-        const meaning =
-          lang === "hi"
-            ? (w.meaning_hi || w.meaning_en || "")
-            : (w.meaning_en || "")
-
-        wordTable += `
-          <tr>
-            <td>${w.word_text}</td>
-            <td>${meaning}</td>
-          </tr>
+      if (words.length > 0) {
+        wordTable = `
+          <h4>Word-by-word Meaning</h4>
+          <table>
+            <tr>
+              <th>Sanskrit</th>
+              <th>Meaning</th>
+            </tr>
         `
-      })
 
-      wordTable += "</table>"
-    } else {
-      wordTable = "<p><em>Word-by-word meaning not available.</em></p>"
-    }
-  }
+        words.forEach(w => {
+          const meaning =
+            lang === "hi"
+              ? (w.meaning_hi || w.meaning_en || "")
+              : (w.meaning_en || "")
 
-  html += `
-    <div class="verse" id="${v.verse_key}">
+          wordTable += `
+            <tr>
+              <td>${w.word_text}</td>
+              <td>${meaning}</td>
+            </tr>
+          `
+        })
 
-      <h3>${v.verse_key}</h3>
-
-      <button onclick="copyVerseLink('${v.verse_key}')">
-        🔗 Share
-      </button>
-
-      <div class="sanskrit">
-        ${v.original_text}
-      </div>
-
-      ${
-        v.transliteration
-          ? `<div class="transliteration">${v.transliteration}</div>`
-          : ""
+        wordTable += "</table>"
+      } else {
+        wordTable = "<p><em>Word-by-word meaning not available.</em></p>"
       }
+    }
 
-      ${wordTable}
+    html += `
+      <div class="verse" id="${v.verse_key}">
 
-      <div class="translation-box">
-        <h4>Translation</h4>
-        <p>
-          ${
-            trans && trans.translation_text
-              ? trans.translation_text
-              : "<em>Translation not available.</em>"
-          }
-        </p>
+        <h3>${v.verse_key}</h3>
+
+        <button onclick="copyVerseLink('${v.verse_key}')">
+          🔗 Share
+        </button>
+
+        <div class="sanskrit">
+          ${v.original_text}
+        </div>
+
+        ${
+          v.transliteration
+            ? `<div class="transliteration">${v.transliteration}</div>`
+            : ""
+        }
+
+        ${wordTable}
+
+        <div class="translation-box">
+          <h4>Translation</h4>
+          <p>
+            ${
+              trans && trans.translation_text
+                ? trans.translation_text
+                : "<em>Translation not available.</em>"
+            }
+          </p>
+        </div>
+
       </div>
+    `
+  })
 
-    </div>
-  `
-})
-
-contentDiv.innerHTML = html
+  contentDiv.innerHTML = html
 }
 
 window.searchVerses = async function() {
@@ -595,18 +603,18 @@ window.searchVerses = async function() {
   let html = `<h2>Search Results</h2><p>${data.length} result(s) shown</p>`
 
   data.forEach(v => {
-  html += `
-    <div class="verse" id="${v.verse_key}">
+    html += `
+      <div class="verse" id="${v.verse_key}">
 
-     <h3>${v.verse_key}</h3>
+        <h3>${v.verse_key}</h3>
 
-     <button onclick="copyVerseLink('${v.verse_key}')">
-      🔗 Share
-     </button>
+        <button onclick="copyVerseLink('${v.verse_key}')">
+          🔗 Share
+        </button>
 
-     <div class="sanskrit">
-      ${v.original_text}
-     </div>
+        <div class="sanskrit">
+          ${v.original_text}
+        </div>
 
         <button onclick="showSuktaByUnitId(${v.unit_id})">
           Open Sukta
@@ -641,7 +649,69 @@ window.showSuktaByUnitId = async function(unitId) {
     return
   }
 
-  showSukta(unitId, chapter.chapter_number, data.unit_number)
+  await showSukta(unitId, chapter.chapter_number, data.unit_number)
+}
+
+window.copyVerseLink = function(verseKey) {
+  const url =
+    window.location.origin +
+    window.location.pathname +
+    "#" +
+    verseKey
+
+  navigator.clipboard.writeText(url)
+    .then(() => {
+      alert("Verse link copied:\n" + url)
+    })
+    .catch(() => {
+      prompt("Copy this verse link:", url)
+    })
+}
+
+async function handleHash() {
+  const hash = window.location.hash
+
+  if (!hash) {
+    showHome()
+    return
+  }
+
+  const verseKey = hash.substring(1)
+
+  if (!verseKey.startsWith("RV-")) {
+    showHome()
+    return
+  }
+
+  const { data, error } = await supabase
+    .from("verses")
+    .select("unit_id")
+    .eq("verse_key", verseKey)
+    .single()
+
+  if (error || !data) {
+    showHome()
+    return
+  }
+
+  await showSuktaByUnitId(data.unit_id)
+
+  setTimeout(() => {
+    const verseElement = document.getElementById(verseKey)
+
+    if (verseElement) {
+      verseElement.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      })
+
+      verseElement.classList.add("highlight-verse")
+
+      setTimeout(() => {
+        verseElement.classList.remove("highlight-verse")
+      }, 3000)
+    }
+  }, 800)
 }
 
 document
@@ -676,94 +746,10 @@ document
     }
   })
 
-window.copyVerseLink = function(verseKey) {
-  const url =
-    window.location.origin +
-    window.location.pathname +
-    "#" +
-    verseKey
+handleHash()
 
-  navigator.clipboard.writeText(url)
-    .then(() => {
-      alert("Verse link copied:\n" + url)
-    })
-    .catch(() => {
-      prompt("Copy this verse link:", url)
-    })
-}
-  
-async function handleHash() {
+window.addEventListener("hashchange", handleHash)
 
-  const hash = window.location.hash
-
-  if (!hash) {
-    showHome()
-    return
-  }
-
-  const verseKey = hash.substring(1)
-
-  if (!verseKey.startsWith("RV-")) {
-    showHome()
-    return
-  }
-
-  const { data, error } = await supabase
-    .from("verses")
-    .select("unit_id")
-    .eq("verse_key", verseKey)
-    .single()
-
-  if (error || !data) {
-    showHome()
-    return
-  }
-
-  const { data: unit } = await supabase
-    .from("units")
-    .select("unit_number, chapter_id")
-    .eq("id", data.unit_id)
-    .single()
-
-  const { data: chapter } = await supabase
-    .from("chapters")
-    .select("chapter_number")
-    .eq("id", unit.chapter_id)
-    .single()
-
-  await showSukta(
-    data.unit_id,
-    chapter.chapter_number,
-    unit.unit_number
-  )
-
-  setTimeout(() => {
-
-    const verseElement =
-      document.getElementById(verseKey)
-
-    if (verseElement) {
-      verseElement.scrollIntoView({
-        behavior: "smooth"
-      })
-    }
-
-  }, 500)
-}
-
-window.copyVerseLink = function(verseKey) {
-  const url =
-    window.location.origin +
-    window.location.pathname +
-    "#" +
-    verseKey
-
-  navigator.clipboard.writeText(url)
-
-  alert("Verse link copied")
-}
-
-window.showHome()
 </script>
 
 </div>
