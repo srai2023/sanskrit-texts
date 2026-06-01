@@ -476,77 +476,80 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
   `
 
   verses.forEach(v => {
-    const trans = translations.find(t => t.verse_key === v.verse_key)
+  const trans = translations.find(t => t.verse_key === v.verse_key)
 
-    let wordTable = ""
+  let wordTable = ""
 
-    if (showWords) {
-      const words = wordMeanings.filter(w => w.verse_key === v.verse_key)
+  if (showWords) {
+    const words = wordMeanings.filter(w => w.verse_key === v.verse_key)
 
-      if (words.length > 0) {
-        wordTable = `
-          <h4>Word-by-word Meaning</h4>
-          <table>
-            <tr>
-              <th>Sanskrit</th>
-              <th>Meaning</th>
-            </tr>
+    if (words.length > 0) {
+      wordTable = `
+        <h4>Word-by-word Meaning</h4>
+        <table>
+          <tr>
+            <th>Sanskrit</th>
+            <th>Meaning</th>
+          </tr>
+      `
+
+      words.forEach(w => {
+        const meaning =
+          lang === "hi"
+            ? (w.meaning_hi || w.meaning_en || "")
+            : (w.meaning_en || "")
+
+        wordTable += `
+          <tr>
+            <td>${w.word_text}</td>
+            <td>${meaning}</td>
+          </tr>
         `
+      })
 
-        words.forEach(w => {
-          const meaning =
-            lang === "hi"
-              ? (w.meaning_hi || w.meaning_en || "")
-              : (w.meaning_en || "")
-
-          wordTable += `
-            <tr>
-              <td>${w.word_text}</td>
-              <td>${meaning}</td>
-            </tr>
-          `
-        })
-
-        wordTable += "</table>"
-      } else {
-        wordTable = "<p><em>Word-by-word meaning not available.</em></p>"
-      }
+      wordTable += "</table>"
+    } else {
+      wordTable = "<p><em>Word-by-word meaning not available.</em></p>"
     }
+  }
 
-    html += `
-        <div
-         class="verse"
-         id="${v.verse_key}"
-        >
-        <h3>${v.verse_key}</h3>
+  html += `
+    <div class="verse" id="${v.verse_key}">
 
-        <div class="sanskrit">
-          ${v.original_text}
-        </div>
+      <h3>${v.verse_key}</h3>
 
-        ${
-          v.transliteration
+      <button onclick="copyVerseLink('${v.verse_key}')">
+        🔗 Share
+      </button>
+
+      <div class="sanskrit">
+        ${v.original_text}
+      </div>
+
+      ${
+        v.transliteration
           ? `<div class="transliteration">${v.transliteration}</div>`
           : ""
-        }
+      }
 
-        ${wordTable}
+      ${wordTable}
 
-        <div class="translation-box">
-          <h4>Translation</h4>
-          <p>
-            ${
-              trans && trans.translation_text
+      <div class="translation-box">
+        <h4>Translation</h4>
+        <p>
+          ${
+            trans && trans.translation_text
               ? trans.translation_text
               : "<em>Translation not available.</em>"
-            }
-          </p>
-        </div>
+          }
+        </p>
       </div>
-    `
-  })
 
-  contentDiv.innerHTML = html
+    </div>
+  `
+})
+
+contentDiv.innerHTML = html
 }
 
 window.searchVerses = async function() {
@@ -592,13 +595,18 @@ window.searchVerses = async function() {
   let html = `<h2>Search Results</h2><p>${data.length} result(s) shown</p>`
 
   data.forEach(v => {
-    html += `
-      <div class="verse">
-        <h3>${v.verse_key}</h3>
+  html += `
+    <div class="verse" id="${v.verse_key}">
 
-        <div class="sanskrit">
-          ${v.original_text}
-        </div>
+     <h3>${v.verse_key}</h3>
+
+     <button onclick="copyVerseLink('${v.verse_key}')">
+      🔗 Share
+     </button>
+
+     <div class="sanskrit">
+      ${v.original_text}
+     </div>
 
         <button onclick="showSuktaByUnitId(${v.unit_id})">
           Open Sukta
@@ -725,6 +733,19 @@ async function handleHash() {
 
   }, 500)
 }
+
+window.copyVerseLink = function(verseKey) {
+  const url =
+    window.location.origin +
+    window.location.pathname +
+    "#" +
+    verseKey
+
+  navigator.clipboard.writeText(url)
+
+  alert("Verse link copied")
+}
+
 window.showHome()
 </script>
 
