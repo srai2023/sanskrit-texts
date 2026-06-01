@@ -244,13 +244,21 @@ window.showRigVeda = async function() {
 }
 
 window.showMandala = async function(chapterId, mandalaNumber) {
+  window.currentChapterId = chapterId
   window.currentMandalaNumber = mandalaNumber
   window.currentUnitId = null
   window.currentSuktaNumber = null
 
   document.getElementById("breadcrumb").innerHTML =
-    "Home > Vedas > Rig Veda > Mandala " + mandalaNumber
-
+  `
+  <a href="#" onclick="showHome()">Home</a>
+  >
+  <a href="#" onclick="showVedas()">Vedas</a>
+  >
+  <a href="#" onclick="showRigVeda()">Rig Veda</a>
+  >
+  Mandala ${mandalaNumber}
+  `
   const { data, error } = await supabase
     .from('sukta_status')
     .select('unit_id, unit_number, status, verse_count, translated_verse_count, word_meaning_verse_count')
@@ -307,7 +315,19 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
   window.currentSuktaNumber = suktaNumber
 
   document.getElementById("breadcrumb").innerHTML =
-    "Home > Vedas > Rig Veda > Mandala " + mandalaNumber + " > Sukta " + suktaNumber
+  `
+  <a href="#" onclick="showHome()">Home</a>
+  >
+  <a href="#" onclick="showVedas()">Vedas</a>
+  >
+  <a href="#" onclick="showRigVeda()">Rig Veda</a>
+  >
+  <a href="#" onclick="showMandala(${window.currentChapterId},${mandalaNumber})">
+  Mandala ${mandalaNumber}
+  </a>
+  >
+  Sukta ${suktaNumber}
+  `
 
   document.getElementById("menu").innerHTML =
     `<button onclick="showRigVeda()">Back to Mandalas</button>`
