@@ -209,6 +209,13 @@ const supabaseKey = 'sb_publishable_xLK66VSKax1BRjirQxb9PA_7n3d5BNU'
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+function aurobindoLink(mandalaNumber, suktaNumber) {
+  const m = String(mandalaNumber).padStart(2, "0")
+  const s = String(suktaNumber).padStart(3, "0")
+
+  return `https://sri-aurobindo.co.in/workings/matherials/rigveda/${m}/${m}-${s}.htm`
+}
+
 window.currentUnitId = null
 window.currentSuktaNumber = null
 window.currentMandalaNumber = null
@@ -496,6 +503,16 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
   let languageTitle = lang === "hi" ? "Hindi" : "English"
 
   let html = "<h2>Mandala " + mandalaNumber + ", Sukta " + suktaNumber + "</h2>"
+  
+  const externalLink = aurobindoLink(mandalaNumber, suktaNumber)
+
+  html += `
+  <p>
+    <a href="${externalLink}" target="_blank">
+      🎧 Text & Audio (Sri Aurobindo Site)
+    </a>
+  </p>
+  `
   html += "<h3>" + languageTitle + " Translation</h3>"
 
   verses.forEach(v => {
