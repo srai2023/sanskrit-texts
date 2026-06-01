@@ -175,6 +175,18 @@ th, td {
     <input type="checkbox" id="showWordByWord">
     Show word-by-word meaning
   </label>
+
+  <br><br>
+
+  <label for="searchBox"><strong>Search:</strong></label>
+  <input
+   type="text"
+   id="searchBox"
+   placeholder="RV-1-99-1, Agni, इन्द्र..."
+   style="padding:8px; width:260px;"
+  >
+
+  <button onclick="searchVerses()">Search</button>
 </div>
 
 <div id="menu" class="card"></div>
@@ -193,6 +205,99 @@ window.currentUnitId = null
 window.currentSuktaNumber = null
 window.currentMandalaNumber = null
 
+window.searchVerses = async function() {
+  const query = document.getElementById("searchBox").value.trim()
+  const contentDiv = document.getElementById("content")
+
+  if (!query) {
+    contentDiv.innerHTML = "<p>Please enter a search term.</p>"
+    return
+  }
+
+  document.getElementById("breadcrumb").innerHTML =
+    "Home > Search"
+
+  document.getElementById("menu").innerHTML =
+    `<button onclick="showHome()">Back to Home</button>`
+
+  contentDiv.innerHTML =
+    "<h2>Searching...</h2>"
+
+  let supabaseQuery = supabase
+    .from("verses")
+    .select("verse_key, verse_number, original_text, unit_id")
+    .limit(50)
+
+  if (query.startsWith("RV-")) {
+    supabaseQuery = supabaseQuery.eq("verse_key", query)
+  } else {
+    supabaseQuery = supabaseQuery.ilike("original_text", "%" + query + "%")
+  }
+
+  const { data, error } = await supabaseQuery
+
+  if (error) {
+    contentDiv.innerHTML = error.message
+    return
+  }
+
+  if (!data || data.length === 0) {
+    contentDiv.innerHTML =
+      "<p>No results found.</p>"
+    return
+  }
+
+  let html = `<h2>Search Results</h2>
+              <p>${data.length} result(s) shown</p>`
+
+  data.forEach(v => {
+    html += `
+      <div class="verse">
+        <h3>${v.verse_key}</h3>
+
+        <div class="sanskrit">
+          ${v.original_text}
+        </div>
+
+        <button onclick="showSuktaByUnitId(${v.unit_id})">
+          Open Sukta
+        </button>
+      </div>
+    `
+  })
+
+  contentDiv.innerHTML = html
+}
+
+window.showSuktaByUnitId = async function(unitId) {
+  const { data, error } = await supabase
+    .from("units")
+    .select("unit_number, chapter_id")
+    .eq("id", unitId)
+    .single()
+
+  if (error) {
+    document.getElementById("content").innerHTML = error.message
+    return
+  }
+
+  const { data: chapter, error: chapterError } = await supabase
+    .from("chapters")
+    .select("chapter_number")
+    .eq("id", data.chapter_id)
+    .single()
+
+  if (chapterError) {
+    document.getElementById("content").innerHTML = chapterError.message
+    return
+  }
+
+  showSukta(
+    unitId,
+    chapter.chapter_number,
+    data.unit_number
+  )
+}
 window.showHome = function() {
   document.getElementById("breadcrumb").innerHTML = ""
 
