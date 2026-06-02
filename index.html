@@ -207,7 +207,7 @@ input[type="text"] {
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 const supabaseUrl = 'https://wuafscskajgrgituurac.supabase.co'
-const supabaseKey = 'sb_publishable_xLK66VSKax1BRjirQxb9PA_7n3d5BNU'
+const supabaseKey = 'PASTE_YOUR_PUBLISHABLE_KEY_HERE'
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
@@ -222,6 +222,26 @@ window.currentSuktaNumber = null
 window.currentMandalaNumber = null
 window.currentChapterId = null
 
+function clearUrl() {
+  const url = new URL(window.location)
+  url.search = ""
+  url.hash = ""
+  window.history.pushState({}, "", url)
+}
+
+window.goHome = function() {
+  clearUrl()
+  showHome()
+}
+
+window.showPopularPage = function() {
+  const url = new URL(window.location)
+  url.search = "?page=popular"
+  url.hash = ""
+  window.history.pushState({}, "", url)
+  showPopularSuktas()
+}
+
 window.showHome = function() {
   window.currentUnitId = null
   window.currentSuktaNumber = null
@@ -235,7 +255,7 @@ window.showHome = function() {
 
     <button onclick="showVedas()">Vedas</button>
 
-    <button onclick="showPopularSuktas()">Popular Suktas</button>
+    <button onclick="showPopularPage()">⭐ Popular Suktas</button>
   `
 
   document.getElementById("content").innerHTML = ""
@@ -243,7 +263,7 @@ window.showHome = function() {
 
 window.showVedas = function() {
   document.getElementById("breadcrumb").innerHTML =
-    `<a href="#" onclick="showHome()">Home</a> > Vedas`
+    `<a href="#" onclick="goHome()">Home</a> > Vedas`
 
   document.getElementById("menu").innerHTML = `
     <h2>Books</h2>
@@ -255,21 +275,28 @@ window.showVedas = function() {
 
 window.showPopularSuktas = function() {
   document.getElementById("breadcrumb").innerHTML =
-    `<a href="#" onclick="showHome()">Home</a> > Popular Suktas`
+    `<a href="#" onclick="goHome()">Home</a> > Popular Suktas`
 
   document.getElementById("menu").innerHTML = `
+    <button onclick="goHome()">🏠 Home</button>
+
     <h2>Popular Suktas</h2>
+
+    <p>
+      Share this page:
+      <button onclick="copyPageLink('?page=popular')">🔗 Copy Popular Suktas URL</button>
+    </p>
 
     <h3>Core Hymns</h3>
     <button onclick="goToPopular(1,1)">🔥 Agni Sukta (RV 1.1)</button>
+    <button onclick="goToPopular(2,23)">🕉️ Brahmaṇaspati Sukta / Gaṇānāṃ Tvā Mantra (RV 2.23)</button>
     <button onclick="goToPopular(1,50)">🌞 Surya Sukta (RV 1.50)</button>
     <button onclick="goToPopular(1,99)">🛡️ Durga Sukta / Jātavedase Mantra (RV 1.99)</button>
     <button onclick="goToPopular(1,154)">🕉️ Vishnu Sukta (RV 1.154)</button>
-    <button onclick="goToPopular(6,74)">🕉️ Soma–Rudra Sukta (Healing Hymn) (RV 6.74)</button>
-    <button onclick="goToPopular(2,23)">🕉️ Brahmaṇaspati Sukta / Gaṇānāṃ Tvā Mantra (RV 2.23)</button>
+
     <h3>Famous Mantras</h3>
     <button onclick="goToPopular(3,62)">🕯️ Gayatri Mantra Sukta (RV 3.62)</button>
-
+    <button onclick="goToPopular(6,74)">🌿 Soma–Rudra Sukta / Healing Hymn (RV 6.74)</button>
     <button onclick="goToPopular(7,59)">🕉️ Mahamrityunjaya Mantra Sukta (RV 7.59)</button>
 
     <h3>Bhagya and Varuna Suktas</h3>
@@ -281,14 +308,35 @@ window.showPopularSuktas = function() {
     <h3>Cosmic and Philosophical Suktas</h3>
     <button onclick="goToPopular(10,90)">👑 Purusha Sukta (RV 10.90)</button>
     <button onclick="goToPopular(10,121)">✨ Hiranyagarbha Sukta (RV 10.121)</button>
-    <button onclick="goToPopular(10,125)">🌺 Devi Sukta (RV 10.125)</button>
+    <button onclick="goToPopular(10,125)">🌺 Devi / Vāk Sukta (RV 10.125)</button>
+    <button onclick="goToPopular(10,127)">🌙 Ratri Sukta (RV 10.127)</button>
     <button onclick="goToPopular(10,129)">🌌 Nasadiya Sukta (RV 10.129)</button>
   `
 
   document.getElementById("content").innerHTML = ""
 }
 
+window.copyPageLink = function(searchString) {
+  const url =
+    window.location.origin +
+    window.location.pathname +
+    searchString
+
+  navigator.clipboard.writeText(url)
+    .then(() => alert("Page link copied:\n" + url))
+    .catch(() => prompt("Copy this page link:", url))
+}
+
 window.goToPopular = async function(mandalaNumber, suktaNumber) {
+  const url = new URL(window.location)
+  url.search = `?mandala=${mandalaNumber}&sukta=${suktaNumber}`
+  url.hash = ""
+  window.history.pushState({}, "", url)
+
+  await openSuktaByMandalaSukta(mandalaNumber, suktaNumber)
+}
+
+window.openSuktaByMandalaSukta = async function(mandalaNumber, suktaNumber) {
   const { data: chapter, error: chapterError } = await supabase
     .from('chapters')
     .select('id')
@@ -312,12 +360,12 @@ window.goToPopular = async function(mandalaNumber, suktaNumber) {
     return
   }
 
-  showSukta(unit.id, mandalaNumber, suktaNumber)
+  await showSukta(unit.id, mandalaNumber, suktaNumber)
 }
 
 window.showRigVeda = async function() {
   document.getElementById("breadcrumb").innerHTML =
-    `<a href="#" onclick="showHome()">Home</a> > <a href="#" onclick="showVedas()">Vedas</a> > Rig Veda`
+    `<a href="#" onclick="goHome()">Home</a> > <a href="#" onclick="showVedas()">Vedas</a> > Rig Veda`
 
   const { data, error } = await supabase
     .from('chapters')
@@ -350,7 +398,7 @@ window.showMandala = async function(chapterId, mandalaNumber) {
   window.currentSuktaNumber = null
 
   document.getElementById("breadcrumb").innerHTML =
-    `<a href="#" onclick="showHome()">Home</a> >
+    `<a href="#" onclick="goHome()">Home</a> >
      <a href="#" onclick="showVedas()">Vedas</a> >
      <a href="#" onclick="showRigVeda()">Rig Veda</a> >
      Mandala ${mandalaNumber}`
@@ -413,14 +461,15 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
   window.currentSuktaNumber = suktaNumber
 
   document.getElementById("breadcrumb").innerHTML =
-    `<a href="#" onclick="showHome()">Home</a> >
+    `<a href="#" onclick="goHome()">Home</a> >
      <a href="#" onclick="showVedas()">Vedas</a> >
      <a href="#" onclick="showRigVeda()">Rig Veda</a> >
      Mandala ${mandalaNumber} >
      Sukta ${suktaNumber}`
 
   document.getElementById("menu").innerHTML =
-    `<button onclick="showRigVeda()">← Back to Mandalas</button>`
+    `<button onclick="showRigVeda()">← Back to Mandalas</button>
+     <button onclick="showPopularPage()">⭐ Popular Suktas</button>`
 
   const lang = document.getElementById("languageSelect").value
   const showWords = document.getElementById("showWordByWord").checked
@@ -472,11 +521,16 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
 
   let languageTitle = lang === "hi" ? "Hindi" : "English"
   let externalLink = aurobindoLink(mandalaNumber, suktaNumber)
+  let suktaUrl =
+    window.location.origin +
+    window.location.pathname +
+    `?mandala=${mandalaNumber}&sukta=${suktaNumber}`
 
   let html = `
     <h2>Mandala ${mandalaNumber}, Sukta ${suktaNumber}</h2>
 
     <p>
+      <button onclick="copyText('${suktaUrl}')">🔗 Copy Sukta URL</button>
       <a href="${externalLink}" target="_blank">
         🎧 Text & Audio on Sri Aurobindo Site
       </a>
@@ -529,7 +583,7 @@ window.showSukta = async function(unitId, mandalaNumber, suktaNumber) {
         <h3>${v.verse_key}</h3>
 
         <button onclick="copyVerseLink('${v.verse_key}')">
-          🔗 Share
+          🔗 Share Verse
         </button>
 
         <div class="sanskrit">
@@ -572,10 +626,10 @@ window.searchVerses = async function() {
   }
 
   document.getElementById("breadcrumb").innerHTML =
-    `<a href="#" onclick="showHome()">Home</a> > Search`
+    `<a href="#" onclick="goHome()">Home</a> > Search`
 
   document.getElementById("menu").innerHTML =
-    `<button onclick="showHome()">← Back to Home</button>`
+    `<button onclick="goHome()">← Back to Home</button>`
 
   contentDiv.innerHTML = "<h2>Searching...</h2>"
 
@@ -611,7 +665,7 @@ window.searchVerses = async function() {
         <h3>${v.verse_key}</h3>
 
         <button onclick="copyVerseLink('${v.verse_key}')">
-          🔗 Share
+          🔗 Share Verse
         </button>
 
         <div class="sanskrit">
@@ -651,7 +705,22 @@ window.showSuktaByUnitId = async function(unitId) {
     return
   }
 
+  const url = new URL(window.location)
+  url.search = `?mandala=${chapter.chapter_number}&sukta=${data.unit_number}`
+  url.hash = ""
+  window.history.pushState({}, "", url)
+
   await showSukta(unitId, chapter.chapter_number, data.unit_number)
+}
+
+window.copyText = function(url) {
+  navigator.clipboard.writeText(url)
+    .then(() => {
+      alert("Link copied:\n" + url)
+    })
+    .catch(() => {
+      prompt("Copy this link:", url)
+    })
 }
 
 window.copyVerseLink = function(verseKey) {
@@ -661,13 +730,32 @@ window.copyVerseLink = function(verseKey) {
     "#" +
     verseKey
 
-  navigator.clipboard.writeText(url)
-    .then(() => {
-      alert("Verse link copied:\n" + url)
-    })
-    .catch(() => {
-      prompt("Copy this verse link:", url)
-    })
+  copyText(url)
+}
+
+async function handleInitialRoute() {
+  const params = new URLSearchParams(window.location.search)
+  const page = params.get("page")
+  const mandala = params.get("mandala")
+  const sukta = params.get("sukta")
+  const hash = window.location.hash
+
+  if (hash && hash.startsWith("#RV-")) {
+    await handleHash()
+    return
+  }
+
+  if (page === "popular") {
+    showPopularSuktas()
+    return
+  }
+
+  if (mandala && sukta) {
+    await openSuktaByMandalaSukta(parseInt(mandala), parseInt(sukta))
+    return
+  }
+
+  showHome()
 }
 
 async function handleHash() {
@@ -748,9 +836,10 @@ document
     }
   })
 
-handleHash()
-
+window.addEventListener("popstate", handleInitialRoute)
 window.addEventListener("hashchange", handleHash)
+
+handleInitialRoute()
 
 </script>
 
